@@ -23,6 +23,7 @@ contract solidRight is Ownable, ERC721{
     // Mappings
     mapping(uint => address) artworkOwnership;
     mapping(address => uint) artworkCounter;
+    mapping (uint => address) artworkApprovals;
 
     // Events
     event newArtworkCreated(uint id, string name);
@@ -62,8 +63,30 @@ contract solidRight is Ownable, ERC721{
         }
         return result;
     }
-    function balanceOf(address _owner) external view override returns (uint256) {return 0;}
-    function ownerOf(uint256 _tokenId) external view override returns (address) {return msg.sender;}
-    function transferFrom(address _from, address _to, uint256 _tokenId) external payable override {}
-    function approve(address _approved, uint256 _tokenId) external payable override {}
+
+    function balanceOf(address _owner) external view override returns (uint256) {
+        return artworkCounter[_owner];
+    }
+
+    function ownerOf(uint256 _tokenId) external view override returns (address) {
+        return artworkOwnership[_tokenId];
+    }
+
+    function transferFrom(address _from, address _to, uint256 _tokenId) external payable override {
+       //only the owner or the approved address of a token/zombie can transfer it
+       require (artworkOwnership[_tokenId] == msg.sender || artworkApprovals[_tokenId] == msg.sender);
+    _transfer(_from, _to, _tokenId);
+    }
+    function _transfer(address _from, address _to, uint256 _tokenId) private {
+        artworkCounter[_to]++;
+        artworkCounter[_from]--;
+        artworkOwnership[_tokenId] = _to;
+        // The ERC721 spec includes a Transfer event
+        emit Transfer(_from, _to, _tokenId);
+    }
+  
+    function approve(address _approved, uint256 _tokenId) external payable override onlyArtworkOwner(_tokenId) {
+        // use the zombieApprovals data structure to store who's been approved for what in between function calls.
+        artworkApprovals[_tokenId] = _approved;
+    }
 }
