@@ -7,6 +7,6 @@ abstract contract ERC721 {
 
   function balanceOf(address _owner) external view virtual returns (uint256);
   function ownerOf(uint256 _tokenId) external view virtual returns (address);
-  function transferFrom(address _from, address _to, uint256 _tokenId) external payable virtual;
+  function transferFrom(address payable _from , address _to, uint256 _tokenId) external payable virtual;
   function approve(address _approved, uint256 _tokenId) external payable virtual;
 }
