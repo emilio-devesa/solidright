@@ -18,7 +18,7 @@ contract solidRight is Ownable, ERC721{
     struct Artwork {
         string name;
         uint256 price;
-        bytes32[] fileHashes;
+        string[] fileHashes;
     }
 
     Artwork[] public artworks;
@@ -38,7 +38,7 @@ contract solidRight is Ownable, ERC721{
     @dev Creates a new artwork piece entry, associates it to an owner and stores the file hashes provided
     by the frontend.
     */
-    function createArtwork(string memory _name, uint256 _price, bytes32[] memory _fileHashes) external {
+    function createArtwork(string memory _name, uint256 _price, string[] memory _fileHashes) public {
         artworks.push(Artwork(_name, _price, _fileHashes));
         uint256 id = artworks.length.sub(1);
         // Assign the ownership of the artwork to msg.sender and increase it's artworks counter by one.
@@ -57,14 +57,14 @@ contract solidRight is Ownable, ERC721{
     /**
     @dev Allows the owner of an entry to change the artwork's price.
     */
-    function changeNamePrice(uint _artworkId, uint256 _newPrice) public onlyArtworkOwner(_artworkId) {
+    function changeArtworkPrice(uint _artworkId, uint256 _newPrice) public onlyArtworkOwner(_artworkId) {
         artworks[_artworkId].price = _newPrice;
     }
 
     /**
     @dev Parses the artworks list and returns an array with the entries which belongs to a certain address.
     */
-    function listArtworksByOwner(address _artworkOwner) external view returns(uint[] memory) {
+    function listArtworksByOwner(address _artworkOwner) public view returns(uint[] memory) {
         uint[] memory result = new uint[](artworkCounter[_artworkOwner]);
         uint counter = 0;
         for (uint i = 0; i < artworks.length; i++) {
@@ -79,32 +79,34 @@ contract solidRight is Ownable, ERC721{
     /**
     @dev Returns the count of artworks which belongs to a certain address.
     */
-    function balanceOf(address _owner) external view override returns (uint256) {
+    function balanceOf(address _owner) public view override returns (uint256) {
         return artworkCounter[_owner];
     }
 
     /**
     @dev Retruns the address to which belongs an artwork entry.
     */
-    function ownerOf(uint256 _tokenId) external view override returns (address) {
+    function ownerOf(uint256 _tokenId) public view override returns (address) {
         return artworkOwnership[_tokenId];
     }
 
     /**
     @dev Allows the owner or an approved address to transfer an entry ownership to another address.
     */
-    function transferFrom(address payable _from, address _to, uint256 _tokenId) external payable override {
+    function transferFrom(address payable _from, address _to, uint256 _tokenId) public payable override {
         // Only the owner or the approved address of an artwork can transfer it.
         require (artworkOwnership[_tokenId] == msg.sender || artworkTransferApprovals[_tokenId] == msg.sender);
-        // Checks if the caller has sent enough ether for the artwork.
-        require (artworks[_tokenId].price == msg.value);
-        // Transfer the tokens to the seller's address.
-        _from.transfer(msg.value);
-        // Transfer the artwork.
-        _transferToken(_from, _to, _tokenId);
+        if(artworkOwnership[_tokenId] != msg.sender) {
+            // Checks if the buyer has sent enough ether for the artwork.
+            require (artworks[_tokenId].price == msg.value);
+            // Transfer the tokens to the seller's address.
+            _from.transfer(msg.value);
+            // Transfer the artwork.
+        }
+        _transferArtwork(_from, _to, _tokenId);
     }
 
-    function _transferToken(address _from, address _to, uint256 _tokenId) private {
+    function _transferArtwork(address _from, address _to, uint256 _tokenId) private {
         artworkCounter[_to].add(1);
         artworkCounter[_from].sub(1);
         artworkOwnership[_tokenId] = _to;
@@ -115,7 +117,7 @@ contract solidRight is Ownable, ERC721{
     /**
     @dev Allows an artwork owner to pre-authorize another address to transfer an artwork entry.
     */
-    function approve(address _approved, uint256 _tokenId) external payable override onlyArtworkOwner(_tokenId) {
+    function approve(address _approved, uint256 _tokenId) public payable override onlyArtworkOwner(_tokenId) {
         // use the artworkTransferApprovals data structure to store who's been approved for what in between function calls.
         artworkTransferApprovals[_tokenId] = _approved;
         emit Approval(msg.sender, _approved, _tokenId);
